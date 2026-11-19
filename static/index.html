@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intern Tracker</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#16202e;--mute:#667085;--line:#e3e7ee;--accent:#2457d6;--hd:#1f3a5f;
+--s-todo:#667085;--s-applied:#2457d6;--s-assess:#b7791f;--s-interview:#7c3aed;--s-offer:#15803d;--s-rej:#c0392b;--s-skip:#98a2b3}
+@media (prefers-color-scheme:dark){:root{--bg:#0f141b;--card:#171e28;--ink:#e6ebf2;--mute:#8d99ab;--line:#263042;--accent:#6b8cff;--hd:#223656}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+header{background:var(--hd);color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+header h1{font-size:18px;margin:0 8px 0 0}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 12px;border-radius:8px;cursor:pointer;font:inherit}
+header .btn{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.25)}
+.btn:hover{filter:brightness(1.1)}.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:wait}
+.spacer{flex:1}
+.sync{font-size:12px;opacity:.85}
+main{padding:16px 20px;max-width:1500px;margin:auto}
+.stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 12px;cursor:pointer;display:flex;gap:8px;align-items:center}
+.chip b{font-size:15px}.chip.on{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.tabs{display:flex;gap:4px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.tab{padding:8px 14px;cursor:pointer;border-bottom:2px solid transparent;color:var(--mute)}
+.tab.on{color:var(--ink);border-color:var(--accent);font-weight:600}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center}
+input,select,textarea{font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+#q{min-width:260px}
+label.t{display:flex;gap:6px;align-items:center;color:var(--mute);cursor:pointer}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:calc(100vh - 260px)}
+table{border-collapse:collapse;width:100%}
+th{position:sticky;top:0;background:var(--card);text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);padding:9px 10px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.row{cursor:pointer}tr.row:hover{background:rgba(120,140,180,.08)}
+td a{color:var(--accent);text-decoration:none;font-weight:500}td a:hover{text-decoration:underline}
+.co{font-weight:600}.mute{color:var(--mute);font-size:12px}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap}
+.tr{font-size:12px;border:1px solid var(--line);padding:1px 8px;border-radius:6px;white-space:nowrap}
+.warn{color:var(--s-assess);font-size:12px}
+select.st{padding:3px 6px;font-weight:600;border-radius:999px;color:#fff;border:0}
+#drawer{position:fixed;top:0;right:0;width:min(460px,100%);height:100%;background:var(--card);border-left:1px solid var(--line);box-shadow:-8px 0 24px rgba(0,0,0,.15);transform:translateX(105%);transition:transform .2s;padding:18px;overflow:auto;z-index:5}
+#drawer.open{transform:none}
+#drawer h2{margin:0 0 2px;font-size:18px}
+.f{display:flex;flex-direction:column;gap:3px;margin:10px 0}.f span{font-size:12px;color:var(--mute)}
+.f input,.f select,.f textarea{width:100%}
+.links{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.empty{padding:40px;text-align:center;color:var(--mute)}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:9px 16px;border-radius:8px;display:none;z-index:9;max-width:80%}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:8}
+.modal.open{display:flex}.modal .box{background:var(--card);padding:20px;border-radius:12px;width:min(480px,94%)}
+.err{background:#fdecea;color:#8a1c12;padding:8px 12px;border-radius:8px;margin-bottom:10px;display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Intern Tracker</h1>
+  <button class="btn" id="bGmail">Sync Gmail</button>
+  <button class="btn" id="bJobs">Find new jobs</button>
+  <button class="btn" id="bExport">Export to Excel</button>
+  <button class="btn" id="bImport">Import Excel</button>
+  <a class="btn" href="/api/export.csv" style="text-decoration:none">CSV</a>
+  <button class="btn primary" id="bAdd">+ Add job</button>
+  <span class="spacer"></span>
+  <span class="sync" id="syncInfo"></span>
+</header>
+<main>
+  <div class="err" id="err"></div>
+  <div class="stats" id="stats"></div>
+  <div class="tabs" id="tabs">
+    <div class="tab on" data-v="mine">My tracker</div>
+    <div class="tab" data-v="discover">Discover</div>
+    <div class="tab" data-v="all">All</div>
+    <div class="tab" data-v="emails">Email log</div>
+  </div>
+  <div class="bar" id="bar">
+    <input id="q" placeholder="Search company, role, location, notes">
+    <select id="fTrack"><option value="">All tracks</option></select>
+    <select id="fSource"><option value="">All sources</option></select>
+    <select id="fSort"><option value="smart">Sort: smart</option><option value="company">Company A-Z</option><option value="posted">Newest posted</option><option value="status">Status</option></select>
+    <label class="t"><input type="checkbox" id="hideApplied" checked> hide firms I applied to</label>
+    <label class="t"><input type="checkbox" id="hideInel" checked> hide ineligible</label>
+    <label class="t"><input type="checkbox" id="focus" checked> only QR / ML / Quantum / Trading</label>
+    <span class="mute" id="count"></span>
+  </div>
+  <div class="card"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+  <div class="links" id="liLinks"></div>
+</main>
+
+<div id="drawer"></div>
+<div id="toast"></div>
+<div class="modal" id="addModal"><div class="box">
+  <h3 style="margin-top:0">Add job</h3>
+  <div class="f"><span>Company</span><input id="aCompany"></div>
+  <div class="f"><span>Role</span><input id="aRole"></div>
+  <div class="f"><span>Link</span><input id="aUrl" placeholder="https://"></div>
+  <div class="f"><span>Location</span><input id="aLoc"></div>
+  <div class="f"><span>Status</span><select id="aStatus"></select></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" id="aCancel">Cancel</button><button class="btn primary" id="aSave">Save</button></div>
+</div></div>
+
+<script>
+const COLORS={"To do":"var(--s-todo)","Applied":"var(--s-applied)","Assessment":"var(--s-assess)","Interview":"var(--s-interview)","Offer":"var(--s-offer)","Rejected":"var(--s-rej)","Skipped":"var(--s-skip)","Ineligible":"var(--s-skip)","Watchlist":"var(--s-skip)","Hold":"var(--s-skip)"};
+const APPLIED=["Applied","Assessment","Interview","Offer","Rejected"];
+const FOCUS=["Quant Research","ML","Quantum","Quant Trading"];
+let jobs=[],emails=[],meta={statuses:[]},view="mine",stat="",openId=null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm=s=>(s||"").toLowerCase().replace(/\(.*?\)/g," ").replace(/[^a-z0-9 ]+/g," ").split(" ").filter(x=>x&&!["inc","llc","lp","ltd","corp","co","company","the","plc","group","holdings"].includes(x)).join(" ");
+function toast(m,ms=3500){const t=$("#toast");t.textContent=m;t.style.display="block";clearTimeout(t._t);t._t=setTimeout(()=>t.style.display="none",ms)}
+async function api(p,o){const r=await fetch(p,o);const j=await r.json().catch(()=>({}));if(!r.ok||j.error)throw new Error(j.error||r.statusText);return j}
+const ago=t=>{if(!t)return"never";const s=(Date.now()/1000-t);if(s<90)return"just now";if(s<5400)return Math.round(s/60)+" min ago";if(s<129600)return Math.round(s/3600)+" h ago";return Math.round(s/86400)+" d ago"};
+
+async function load(){
+  [jobs,meta]=await Promise.all([api("/api/jobs"),api("/api/status")]);
+  if(view==="emails")emails=await api("/api/emails");
+  const tr=[...new Set(jobs.map(j=>j.track).filter(Boolean))].sort(), so=[...new Set(jobs.map(j=>j.source).filter(Boolean))].sort();
+  fill("#fTrack",tr,"All tracks");fill("#fSource",so,"All sources");
+  if(!$("#aStatus").children.length)$("#aStatus").innerHTML=meta.statuses.map(s=>`<option>${s}</option>`).join("");
+  let g=meta.gmail_configured?`Gmail ${ago(meta.gmail_synced)}`:"Gmail not connected (see README)";
+  $("#syncInfo").textContent=`${g} · jobs ${ago(meta.jobs_refreshed)} · Excel ${ago(meta.excel_exported)}`+(Object.keys(meta.busy||{}).length?" · working...":"");
+  const er=[meta.gmail_error&&("Gmail: "+meta.gmail_error),meta.excel_error&&("Excel: "+meta.excel_error)].filter(Boolean).join("  |  ");
+  $("#err").style.display=er?"block":"none";$("#err").textContent=er;
+  render();
+}
+function fill(sel,vals,first){const el=$(sel),cur=el.value;el.innerHTML=`<option value="">${first}</option>`+vals.map(v=>`<option>${esc(v)}</option>`).join("");el.value=cur}
+
+function appliedFirms(){return new Set(jobs.filter(j=>APPLIED.includes(j.status)).map(j=>norm(j.company)))}
+function filtered(){
+  const q=$("#q").value.toLowerCase().trim(),tr=$("#fTrack").value,so=$("#fSource").value;
+  let rows=jobs.filter(j=>{
+    if(view==="mine"&&!j.tracked)return false;
+    if(view==="discover"&&(j.tracked||j.status!=="To do"))return false;
+    if(stat&&j.status!==stat)return false;
+    if(tr&&j.track!==tr)return false;if(so&&j.source!==so)return false;
+    if(q&&!(`${j.company} ${j.role} ${j.location} ${j.notes} ${j.phase}`.toLowerCase().includes(q)))return false;
+    if(view==="discover"){
+      if($("#hideApplied").checked&&j.firm_applied)return false;
+      if($("#hideInel").checked&&j.flags)return false;
+      if($("#focus").checked&&!FOCUS.includes(j.track))return false;
+    }
+    return true;
+  });
+  const s=$("#fSort").value,order=["Offer","Interview","Assessment","Applied","To do","Watchlist","Hold","Rejected","Skipped","Ineligible"];
+  rows.sort((a,b)=>s==="company"?a.company.localeCompare(b.company):s==="posted"?(b.posted||"").localeCompare(a.posted||""):
+    s==="status"?order.indexOf(a.status)-order.indexOf(b.status)||a.company.localeCompare(b.company):
+    (view==="mine"?order.indexOf(a.status)-order.indexOf(b.status):0)||b.fit-a.fit||(b.posted||"").localeCompare(a.posted||"")||a.company.localeCompare(b.company));
+  return rows;
+}
+function renderStats(){
+  const cnt={};jobs.filter(j=>j.tracked||APPLIED.includes(j.status)).forEach(j=>cnt[j.status]=(cnt[j.status]||0)+1);
+  const disc=jobs.filter(j=>!j.tracked&&j.status==="To do").length;
+  const order=["To do","Applied","Assessment","Interview","Offer","Rejected","Skipped","Ineligible","Watchlist","Hold"];
+  $("#stats").innerHTML=order.filter(s=>cnt[s]).map(s=>`<div class="chip ${stat===s?"on":""}" data-s="${s}"><span class="pill" style="background:${COLORS[s]}">${s}</span><b>${cnt[s]}</b></div>`).join("")+
+    `<div class="chip" data-s="__d"><span>Discovered, not yet tracked</span><b>${disc}</b></div>`;
+  document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{const s=c.dataset.s;if(s==="__d"){setView("discover");return}stat=stat===s?"":s;if(view==="discover"||view==="emails")setView("mine");else render()});
+}
+function statusSel(j){return `<select class="st" data-id="${j.id}" style="background:${COLORS[j.status]}">${meta.statuses.map(s=>`<option ${s===j.status?"selected":""}>${s}</option>`).join("")}</select>`}
+function render(){
+  renderStats();
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on",t.dataset.v===view));
+  $("#bar").style.display=view==="emails"?"none":"flex";
+  document.querySelectorAll("#hideApplied,#hideInel,#focus").forEach(e=>e.parentElement.style.display=view==="discover"?"flex":"none");
+  if(view==="emails")return renderEmails();
+  const rows=filtered();
+  $("#count").textContent=`${rows.length} shown`;
+  $("#thead").innerHTML=`<tr><th>Company</th><th>Role</th><th>Track</th><th>Location</th><th>Status</th><th>${view==="discover"?"Posted":"Phase / notes"}</th><th>Link</th></tr>`;
+  const show=rows.slice(0,700);
+  $("#tbody").innerHTML=show.map(j=>`<tr class="row" data-id="${j.id}">
+    <td class="co">${esc(j.company)}${view==="discover"&&j.firm_applied?'<div class="warn">already applied to this firm</div>':""}</td>
+    <td>${j.url?`<a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.role)}</a>`:esc(j.role)}${j.flags?`<div class="warn">${esc(j.flags.replace(/;/g,", "))}</div>`:""}</td>
+    <td><span class="tr">${esc(j.track)}</span></td><td>${esc(j.location)}</td>
+    <td>${statusSel(j)}</td>
+    <td>${view==="discover"?esc(j.posted):`<div>${esc(j.phase)}</div><div class="mute">${esc(j.notes)}</div>`}<div class="mute">${esc(j.source)}</div></td>
+    <td>${j.url?`<a href="${esc(j.url)}" target="_blank" rel="noopener">Open</a>`:`<a href="https://www.google.com/search?q=${encodeURIComponent(j.company+" "+j.role+" internship 2027")}" target="_blank" rel="noopener">Search</a>`}</td></tr>`).join("")||`<tr><td colspan="7" class="empty">Nothing here.</td></tr>`;
+  if(rows.length>show.length)$("#count").textContent+=` (first ${show.length}, narrow the filters)`;
+  document.querySelectorAll("tr.row").forEach(r=>r.onclick=e=>{if(e.target.closest("a,select"))return;openDrawer(+r.dataset.id)});
+  document.querySelectorAll("select.st").forEach(s=>s.onchange=async()=>{await patch(+s.dataset.id,{status:s.value});});
+  const li=q=>`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(q)}&f_TPR=r2592000&f_E=1`;
+  $("#liLinks").innerHTML="<span class='mute'>Quick searches:</span>"+["quantitative researcher intern summer 2027","machine learning research intern summer 2027","quantum intern summer 2027","quantitative trading intern 2027"].map(q=>`<a class="btn" target="_blank" rel="noopener" href="${li(q)}">LinkedIn: ${q.replace(" summer 2027","").replace(" 2027","")}</a>`).join("");
+}
+function renderEmails(){
+  $("#thead").innerHTML="<tr><th>Date</th><th>From</th><th>Subject</th><th>Detected</th><th>Matched to</th><th></th></tr>";
+  $("#count").textContent="";
+  const opts=jobs.filter(j=>j.tracked).sort((a,b)=>a.company.localeCompare(b.company)).map(j=>`<option value="${j.id}">${esc(j.company)} - ${esc(j.role.slice(0,40))}</option>`).join("");
+  $("#tbody").innerHTML=emails.map(e=>`<tr><td>${new Date(e.date*1000).toLocaleDateString()}</td><td>${esc(e.sender)}</td><td>${esc(e.subject)}</td>
+    <td><span class="pill" style="background:${COLORS[e.kind]||"#666"}">${esc(e.kind)}</span></td>
+    <td>${e.job_id?esc(e.company):`<span class="warn">${esc(e.note)}</span>`}</td>
+    <td>${e.job_id?"":`<select data-m="${esc(e.msgid)}"><option value="">assign...</option>${opts}</select>`}</td></tr>`).join("")||`<tr><td colspan="6" class="empty">No emails processed yet. Connect Gmail and press Sync Gmail.</td></tr>`;
+  document.querySelectorAll("select[data-m]").forEach(s=>s.onchange=async()=>{if(!s.value)return;await api(`/api/emails/${encodeURIComponent(s.dataset.m)}/assign`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({job_id:s.value})});toast("Assigned");load()});
+}
+async function patch(id,d){try{const r=await api("/api/jobs/"+id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)});const i=jobs.findIndex(j=>j.id===id);jobs[i]=r;render();if(openId===id)openDrawer(id)}catch(e){toast(e.message)}}
+function openDrawer(id){
+  const j=jobs.find(x=>x.id===id);if(!j)return;openId=id;
+  const ln=`https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(j.company+" "+j.role)}`;
+  $("#drawer").innerHTML=`<div style="display:flex;justify-content:space-between"><h2>${esc(j.company)}</h2><button class="btn" id="dClose">Close</button></div>
+  <div class="mute">${esc(j.source)} · added ${esc(j.added)}${j.posted?" · posted "+esc(j.posted):""}${j.applied_date?" · applied "+esc(j.applied_date):""}</div>
+  <div class="links">${j.url?`<a class="btn primary" target="_blank" rel="noopener" href="${esc(j.url)}">Open posting</a>`:""}
+  <a class="btn" target="_blank" rel="noopener" href="${ln}">LinkedIn</a>
+  <a class="btn" target="_blank" rel="noopener" href="https://www.google.com/search?q=${encodeURIComponent(j.company+" "+j.role+" internship 2027 apply")}">Google</a></div>
+  ${j.flags?`<div class="warn">Flags: ${esc(j.flags.replace(/;/g,", "))}</div>`:""}
+  <div class="f"><span>Role</span><input id="dRole" value="${esc(j.role)}"></div>
+  <div class="f"><span>Status</span><select id="dStatus">${meta.statuses.map(s=>`<option ${s===j.status?"selected":""}>${s}</option>`).join("")}</select></div>
+  <div class="f"><span>Phase / latest update</span><input id="dPhase" value="${esc(j.phase)}"></div>
+  <div class="f"><span>Track</span><input id="dTrack" value="${esc(j.track)}"></div>
+  <div class="f"><span>Location</span><input id="dLoc" value="${esc(j.location)}"></div>
+  <div class="f"><span>Link</span><input id="dUrl" value="${esc(j.url)}"></div>
+  <div class="f"><span>Notes</span><textarea id="dNotes" rows="5">${esc(j.notes)}</textarea></div>
+  <div style="display:flex;gap:8px"><button class="btn primary" id="dSave">Save</button><button class="btn" id="dDel" style="margin-left:auto">Delete</button></div>`;
+  $("#drawer").classList.add("open");
+  $("#dClose").onclick=closeDrawer;
+  $("#dSave").onclick=async()=>{await patch(id,{role:$("#dRole").value,status:$("#dStatus").value,phase:$("#dPhase").value,track:$("#dTrack").value,location:$("#dLoc").value,url:$("#dUrl").value,notes:$("#dNotes").value});toast("Saved")};
+  $("#dDel").onclick=async()=>{if(!confirm("Delete this row?"))return;await api("/api/jobs/"+id,{method:"DELETE"});jobs=jobs.filter(x=>x.id!==id);closeDrawer();render()};
+}
+function closeDrawer(){$("#drawer").classList.remove("open");openId=null}
+async function setView(v){view=v;if(v!=="mine")stat=stat&&v==="emails"?"":stat;closeDrawer();if(v==="emails")emails=await api("/api/emails");render()}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>setView(t.dataset.v));
+["#q","#fTrack","#fSource","#fSort","#hideApplied","#hideInel","#focus"].forEach(s=>$(s).addEventListener("input",render));
+async function act(btn,path,label,after){btn.disabled=true;const t=btn.textContent;btn.textContent=label;try{const r=await api(path,{method:"POST"});toast(after(r),6000);await load()}catch(e){toast(e.message,7000)}btn.disabled=false;btn.textContent=t}
+$("#bGmail").onclick=()=>act($("#bGmail"),"/api/sync/gmail","Syncing...",r=>`Scanned ${r.scanned} emails, ${r.changed} updates, ${r.created} new`);
+$("#bJobs").onclick=async()=>{const b=$("#bJobs");b.disabled=true;toast("Searching GitHub lists and company boards... this takes a minute",8000);await api("/api/sync/jobs",{method:"POST"});const t=setInterval(async()=>{const s=await api("/api/status");if(!s.busy.jobs){clearInterval(t);b.disabled=false;await load();toast("Job search finished: "+Object.entries(s.jobs_stats).map(([k,v])=>`${k}: ${v}`).join(" | "),9000)}},3000)};
+$("#bExport").onclick=()=>act($("#bExport"),"/api/sync/excel/export","Exporting...",r=>`Excel updated: ${r.applied} applied, ${r.other_tracked} tracked, ${r.discovered} discovered`);
+$("#bImport").onclick=()=>{if(confirm("Import the Applied and Not Applied tabs from Excel? Statuses in Excel overwrite the site."))act($("#bImport"),"/api/sync/excel/import","Importing...",r=>`Imported ${r.rows} rows (${r.new} new)`)};
+$("#bAdd").onclick=()=>$("#addModal").classList.add("open");
+$("#aCancel").onclick=()=>$("#addModal").classList.remove("open");
+$("#aSave").onclick=async()=>{try{await api("/api/jobs",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({company:$("#aCompany").value,role:$("#aRole").value,url:$("#aUrl").value,location:$("#aLoc").value,status:$("#aStatus").value})});$("#addModal").classList.remove("open");["#aCompany","#aRole","#aUrl","#aLoc"].forEach(s=>$(s).value="");load()}catch(e){toast(e.message)}};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeDrawer();$("#addModal").classList.remove("open")}});
+load();setInterval(()=>{if(!openId&&!document.querySelector("select:focus"))load()},60000);
+</script>
+</body>
+</html>

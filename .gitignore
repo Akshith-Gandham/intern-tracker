@@ -1,0 +1,8 @@
+.env
+tracker.db
+*.bak
+__pycache__/
+jobs.csv
+server.log
+*.xlsx
+*.log
